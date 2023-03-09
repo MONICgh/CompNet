@@ -9,19 +9,19 @@ import (
 )
 
 const (
-	CONN_HOST = "localhost"
-	CONN_PORT = "3334"
-	CONN_TYPE = "tcp"
+	HOST = "localhost"
+	PORT = "3334"
+	TYPE = "tcp"
 )
 
 func main() {
-	l, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
+	l, err := net.Listen(TYPE, HOST+":"+PORT)
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
 	}
 	defer l.Close()
-	fmt.Println("Listening on " + CONN_HOST + ":" + CONN_PORT)
+	fmt.Println("Listening on " + HOST + ":" + PORT)
 	for {
 		conn, err := l.Accept()
 		if err != nil {
