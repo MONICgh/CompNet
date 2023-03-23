@@ -16,7 +16,11 @@ const (
 	TYPE = "tcp"
 )
 
+var cash map[string]*http.Response
+
 func main() {
+
+	cash = make(map[string]*http.Response)
 
 	request, err := net.Listen(TYPE, HOST+":"+PORT)
 	if err != nil {
@@ -49,9 +53,21 @@ func handleRequest(conn net.Conn) {
 	typeReq := strings.Split(string(buf[:reqLen]), " ")[0]
 
 	var data *http.Response
+	var ok bool
 	switch typeReq {
 	case "GET":
+		data, ok = cash[url]
+		if ok {
+			fmt.Println("Request in cash!")
+			break
+		}
+
 		data, err = http.Get(url)
+		if err != nil {
+			println("Error GET request http:", err.Error())
+			os.Exit(1)
+		}
+		cash[url] = data
 
 	case "POST":
 		body := bytes.NewReader([]byte(strings.Split(string(buf[:reqLen]), "\r\n\r\n")[1]))
@@ -61,6 +77,10 @@ func handleRequest(conn net.Conn) {
 		)[1]
 
 		data, err = http.Post(url, contentType, body)
+		if err != nil {
+			println("Error POST request http:", err.Error())
+			os.Exit(1)
+		}
 
 	default:
 		println("Error request type http:", typeReq)
@@ -73,8 +93,8 @@ func handleRequest(conn net.Conn) {
 	}()
 
 	fmt.Println("Request heard:", data.Status, url)
-
 	conn.Write([]byte("HTTP/1.1 " + data.Status + "\r\n"))
+
 	if data.StatusCode >= 300 {
 		conn.Write([]byte("\r\n"))
 		return
