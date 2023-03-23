@@ -21,6 +21,7 @@ var cash map[string]*http.Response
 func main() {
 
 	cash = make(map[string]*http.Response)
+	readBlackList()
 
 	request, err := net.Listen(TYPE, HOST+":"+PORT)
 	if err != nil {
@@ -50,6 +51,12 @@ func handleRequest(conn net.Conn) {
 	}
 
 	url := strings.Split(string(buf[:reqLen]), " ")[1][1:]
+	if inBlackList(url) {
+		fmt.Println("This url in black list:", url)
+		conn.Write([]byte("HTTP/1.1 " + "445" + "\r\n"))
+		conn.Write([]byte("\r\n"))
+		return
+	}
 	typeReq := strings.Split(string(buf[:reqLen]), " ")[0]
 
 	var data *http.Response
@@ -114,4 +121,43 @@ func handleRequest(conn net.Conn) {
 	}
 	conn.Write(bodyBytes)
 	conn.Write([]byte("\r\n"))
+}
+
+var blackList map[string]struct{}
+
+func readBlackList() {
+	blackList = make(map[string]struct{})
+
+	f, _ := os.Open("black-list.txt")
+	data := make([]byte, 1024)
+	n, _ := f.Read(data)
+	for _, s := range strings.Split(string(data[:n]), "\n") {
+		blackList[s] = struct{}{}
+	}
+}
+
+func inBlackList(url string) bool {
+
+	pieces := strings.Split(url, "/")[2:]
+	dom := "." + strings.Split(pieces[0], ".")[len(strings.Split(pieces[0], "."))-1]
+
+	_, ok := blackList[dom]
+	if ok {
+		return true
+	}
+
+	prefix := ""
+	for i, piece := range pieces {
+		if i == 0 {
+			prefix += piece
+		} else {
+			prefix += "/" + piece
+		}
+
+		_, ok := blackList[prefix]
+		if ok {
+			return true
+		}
+	}
+	return false
 }
